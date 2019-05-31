@@ -50,6 +50,7 @@ public class Replycontroller {
 		log.info(cri);
 		return new ResponseEntity<>(service.getList(cri, bno),HttpStatus.OK);
 	}
+//	sdf
 	@GetMapping(value = "/{rno}",
 			produces = {MediaType.APPLICATION_ATOM_XML_VALUE,
 						MediaType.APPLICATION_JSON_UTF8_VALUE})

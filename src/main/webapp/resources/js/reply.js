@@ -40,6 +40,7 @@ var replyService = (function(){
 		info.type = "put";
 		basicAjax(info);
 	}
+//	sdf
 	function get(info){
 		getAjax(info);
 	}
