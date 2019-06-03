@@ -54,9 +54,46 @@
 							<!-- /.panel -->
 							<div class="paner panel-default">
 								<div class="panel-heading">
-									<i class="fa fa-coments fa-fw">Reply</i>
+									<i class="fa fa-comments fa-fw"></i> Reply
+									<button id="addReplyBtn" class="btn btn-primary btn-xs pull-right">
+										New Reply
+									</button>
 								</div>
 								<!-- /.panel-heading -->
+								<!-- Modal -->
+								<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+									<div class="modal-dialog">
+										<div class="modal-content">
+											<div class="modal-header">
+												<button class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+												<h4 class="modal-title" id="myModalLabel">REPLY MODAL</h4>
+											</div>
+											<div class="modal-body">
+												<div class="form-group">
+													<label>Reply</label>
+													<input type="text" class="form-control" name="reply" value="New Reply!!!" />
+												</div>
+												<div class="form-group">
+													<label>Replyer</label>
+													<input type="text" class="form-control" name="replyer" value="replyer" />
+												</div>
+												<div class="form-group">
+													<label>Reply Date</label>
+													<input type="text" class="form-control" name="replyDate" value="" />
+												</div>
+											</div>
+											<div class="modal-footer">
+												<button id="modalModBtn" class="btn btn-warning">Modify</button>
+												<button id="modalRemoveBtn" class="btn btn-danger">Remove</button>
+												<button id="modalRegisterBtn" class="btn btn-primary">Register</button>
+												<button id="modalCloseBtn" class="btn btn-default">Close</button>
+											</div>
+										</div>
+										<!-- /.modal-content -->
+									</div>
+									<!-- /.modal-dialog -->
+								</div>
+								<!-- /.modal -->
 								<div class="panel-body">
 									<ul class="chat">
 										<li class="left clearfix" data-rno="12">
@@ -71,6 +108,9 @@
 										<!-- end reply -->
 									</ul>
 									<!-- /. end  ul -->
+								</div>
+								<div class="panel-footer">
+								
 								</div>
 								<!-- /.panel .chat-panel -->
 							</div>
@@ -89,12 +129,23 @@
 $(document).ready(function() {
 	var bnoValue = '<c:out value="${board.bno}" />'
 	var replyUL  = $(".chat");
+	var pageNum = 1;
 	
 	showList(1);
 	function showList(page){
+		
 		replyService.getList({
-			url:"/replies/pages/"+bnoValue+"/"+page,
-			callback:function(list){
+			url:"/replies/pages/"+bnoValue+"/"+(page||1),
+			callback:function(data){
+				var replyCnt = data.replyCnt;
+				var list = data.list;
+				
+				if (page == -1) {
+					pageNum = Math.ceil(replyCnt/10.0);
+					showList(pageNum);
+					return;
+				}
+				
 				var str ="";
 				if (list == null || list.length == 0) {
 					replyUL.html("작성된 글이 없음");
@@ -102,7 +153,7 @@ $(document).ready(function() {
 				}
 				for (var i = 0,len = list.length || 0; i < len; i++) {
 					str += '<li class="left clearfix" data-rno="'+list[i].rno+'">';
-					str += '<div><div class="header"><strong class="primary-font">'+list[i].replyer+'</strong>'
+					str += '<div><div class="header"><strong class="primary-font">['+list[i].rno+'] '+list[i].replyer+'</strong>'
 					str += '<small class="pull-right text-muted">'+replyService.displayTime(list[i].replyDate)+'</small></div>';
 					str += '<p>'+list[i].reply+'</p></div></li>';
 				}
@@ -111,40 +162,113 @@ $(document).ready(function() {
 			}
 		});
 	}
-	//for replyService add test
-	replyService.add({
-		reply:{reply:"JS TEST",replyer:"tester",bno:bnoValue},
-			url:'/replies/new'
-			,callback:function(list){
+	/* 모달 이벤트 영역 */
+	var modal = $(".modal");
+	var modalInputReply = modal.find("input[name='reply']");
+	var modalInputReplyer = modal.find("input[name='replyer']");
+	var modalInputReplyDate = modal.find("input[name='replyDate']");
+	
+	var modalModBtn = $("#modalModBtn");
+	var modalRemoveBtn = $("#modalRemoveBtn");
+	var modalRegisterBtn = $("#modalRegisterBtn");
+	
+	$("#addReplyBtn").click(function(){
+		modal.find("input").val("");
+		modalInputReplyDate.closest("div").hide();
+		modal.find("button[id !='modalCloseBtn']").hide();
+		
+		modalRegisterBtn.show();
+		
+		$(".modal").modal("show");
+	});
+	
+	modalRegisterBtn.click(function(e){
+		var reply = {
+				reply:modalInputReply.val(),
+				replyer:modalInputReplyer.val(),
+				bno:bnoValue
+		};
+		replyService.add({
+				reply:reply,
+				url:'/replies/new'
+				,callback:function(result){
+					alert(result);
+					
+					modal.find("input").val("");
+					modal.modal("hide");
+					
+					showList(-1);
+				}});
+		
+	});
+	
+	$(".chat").on("click","li",function(e){
+		var rno = $(this).data("rno");
+		
+		/* 댓글 호출 */
+		replyService.get({
+			url:"/replies/"+rno,
+			callback:function(reply){
+				modalInputReply.val(reply.reply);
+				modalInputReplyer.val(reply.replyer)
+				.attr("readonly","readonly");
+				modalInputReplyDate.val(replyService.displayTime(reply.replyDate));
+				modal.data("rno",reply.rno);
 				
-			}});
+				modal.find("button[id !='modalCloseBtn']").hide();
+				modalModBtn.show();
+				modalRemoveBtn.show();
+				
+				$(".modal").modal("show");
+			}
+		});
+		/* 댓글 수정 */
+		modalModBtn.click(function(e){
+			replyService.update({
+				reply:{rno:modal.data("rno"),bno:bnoValue,reply:modalInputReply.val()},
+				url:'/replies/'+modal.data("rno"),
+				callback:function(result){
+					alert(result);
+					modal.modal("hide");
+					showList(1);
+				}
+			});
+		});
+		
+		/* 댓글 삭제 */
+		modalRemoveBtn.click(function(e){
+			replyService.remove({
+				url:"/replies/"+modal.data("rno"),
+				callback:function(count){
+					if (count === "success") {
+						alert("REMOVE");
+						modal.modal("hide");
+						showList(1);
+					}
+				},
+				error:function(err){
+					console("에러는?");
+					console(err);
+					alert("ERROR...");
+				}
+			});
+		});
+		
+	});
+	/* 모달 이벤트 영역 */
+	
+	/* 페이지 리스트 */
+	var replyPageFooter = $(".panel-footer");
+	
+	function showReplyPage(replyCnt){
+		var endNum = Math.ceil(pageNum / 10.0);
+	}
+	/* 페이지 리스트 */
+	
+	/* 화면 이동 */	
 	var operForm = $('#operForm');
 	$("button[data-oper='modify']").click(function(e){
 		operForm.attr("actioin","/board/modify").submit();
-	});
-	/* replyService.remove({
-		url:"/replies/"+22,
-		callback:function(count){
-			if (count === "success") {
-				alert("REMOVE");
-			}
-		},
-		error:function(err){
-			alert("ERROR...");
-		}
-	}); */
-	replyService.update({
-		reply:{rno:34,bno:bnoValue,reply:"Modified Reply...."},
-		url:'/replies/'+34,
-		callback:function(result){
-			alert("수정완료");
-		}
-	});
-	replyService.get({
-		url:"/replies/"+10,
-		callback:function(data){
-			console.log(data);
-		}
 	});
 	$("button[data-oper='list']").click(function(e){
 		operForm.find("#bno").remove();
