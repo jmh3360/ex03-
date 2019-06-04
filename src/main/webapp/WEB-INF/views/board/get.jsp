@@ -159,6 +159,7 @@ $(document).ready(function() {
 				}
 				
 				replyUL.html(str);
+				showReplyPage(replyCnt);
 			}
 		});
 	}
@@ -174,6 +175,7 @@ $(document).ready(function() {
 	
 	$("#addReplyBtn").click(function(){
 		modal.find("input").val("");
+		modalInputReplyer.removeAttr("readonly");
 		modalInputReplyDate.closest("div").hide();
 		modal.find("button[id !='modalCloseBtn']").hide();
 		
@@ -199,9 +201,7 @@ $(document).ready(function() {
 					
 					showList(-1);
 				}});
-		
 	});
-	
 	$(".chat").on("click","li",function(e){
 		var rno = $(this).data("rno");
 		
@@ -230,7 +230,7 @@ $(document).ready(function() {
 				callback:function(result){
 					alert(result);
 					modal.modal("hide");
-					showList(1);
+					showList(pageNum);
 				}
 			});
 		});
@@ -243,7 +243,7 @@ $(document).ready(function() {
 					if (count === "success") {
 						alert("REMOVE");
 						modal.modal("hide");
-						showList(1);
+						showList(pageNum);
 					}
 				},
 				error:function(err){
@@ -262,7 +262,48 @@ $(document).ready(function() {
 	
 	function showReplyPage(replyCnt){
 		var endNum = Math.ceil(pageNum / 10.0);
+		var startNum = endNum;
+		
+		var prev = startNum != 1;
+		var next = false;
+		
+		if (endNum * 10 >= replyCnt) {
+			endNum = Math.ceil(replyCnt/10.0);
+		}
+		
+		if (endNum * 10 < replyCnt) {
+			next = true;
+		}
+		
+		var str = "<ul class='pagination pull-right'>";
+		
+		if (prev) {
+			str += "<li class ='page-item'><a class='page-link' href='"+(startNum -1)+"'>Previos</a></li>";
+		}
+		
+		for (var i = startNum; i <= endNum; i++) {
+			var active = pageNum == i ? "active" : "";
+			
+			str += '<li class="page-item" '+active+'><a href="'+i+'" class="page-link">'+i+'</a></li>'
+		}
+		if (next) {
+			str += "<li class ='page-item'><a class='page-link' href='"+(endNum +1)+"'>Next</a></li>";
+		}
+		console.log(str);
+		replyPageFooter.html(str);
+		
 	}
+	replyPageFooter.on("click","li a",function(e){
+		e.preventDefault();
+		console.log("page click");
+		
+		var targetPageNum = $(this).attr("href");
+		
+		console.log("targetPageNum : " + targetPageNum);
+		
+		pageNum = targetPageNum;
+		showList(pageNum);
+	});
 	/* 페이지 리스트 */
 	
 	/* 화면 이동 */	
